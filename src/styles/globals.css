@@ -1,0 +1,157 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary-50: #FAF3F0;
+  --color-primary-100: #F3E4DD;
+  --color-primary-200: #E7C9BC;
+  --color-primary-300: #DBAD9A;
+  --color-primary-400: #C9886F;
+  --color-primary-500: #B36648; /* Core Logo Terracotta */
+  --color-primary-600: #9E5336;
+  --color-primary-700: #844128;
+  --color-primary-800: #6B331F;
+  --color-primary-900: #462012;
+
+  --color-secondary-50: #F2F5F3;
+  --color-secondary-100: #E1E8E3;
+  --color-secondary-500: #698070;
+  --color-secondary-800: #38463D;
+
+  --color-accent-400: #E6B87D;
+  --color-accent-500: #D4A373;
+
+  --color-surface-pure: #FFFFFF;
+  --color-surface-warm: #FDFBF9;
+  --color-surface-muted: #F4EFEB;
+
+  --color-ink-primary: #261D1A;
+  --color-ink-secondary: #6B5E57;
+  --color-ink-tertiary: #9E8F87;
+
+  --color-border: #E8E0D9;
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-urdu: 'Noto Nastaliq Urdu', 'Noto Sans Arabic', serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+body {
+  background-color: #FDFBF9;
+  color: #261D1A;
+  min-height: 100vh;
+  overflow-x: hidden;
+  selection-background-color: #B36648;
+  selection-color: #FFFFFF;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: #B36648;
+  color: #FFFFFF;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FDFBF9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DBAD9A;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B36648;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(253, 251, 249, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(232, 224, 217, 0.7);
+}
+
+.glass-dropdown {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(232, 224, 217, 0.8);
+}
+
+/* Hide scrollbars when needed */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area insets for mobile */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Neon border beam animation for budget cards */
+@keyframes borderBeamRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-border-beam {
+  animation: borderBeamRotate 4s linear infinite;
+}
+
+/* Chat container dedicated scrollbar and containment */
+.chat-messages-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chat-messages-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 9999px;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-thumb {
+  background: #C9886F;
+  border-radius: 9999px;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9E5336;
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
