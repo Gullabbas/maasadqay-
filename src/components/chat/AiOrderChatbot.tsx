@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ChevronDown,
   ArrowDown,
+  Keyboard,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { useChatUIStore, useCartStore } from "@/lib/store";
@@ -51,9 +52,52 @@ export default function AiOrderChatbot() {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [sessionState, setSessionState] = useState<any>({ step: "greeting", cart: [], customer: {} });
 
+  // Mobile virtual keyboard viewport height tracker
+  const [viewportStyle, setViewportStyle] = useState<{ height?: string; top?: string }>({});
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic mobile keyboard height listener using window.visualViewport
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleViewportChange = () => {
+      if (typeof window !== "undefined" && window.innerWidth < 640) {
+        if (window.visualViewport) {
+          setViewportStyle({
+            height: `${window.visualViewport.height}px`,
+            top: `${window.visualViewport.offsetTop}px`,
+          });
+        } else {
+          setViewportStyle({
+            height: `${window.innerHeight}px`,
+            top: "0px",
+          });
+        }
+      } else {
+        setViewportStyle({});
+      }
+    };
+
+    handleViewportChange();
+
+    if (typeof window !== "undefined" && window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleViewportChange);
+      window.visualViewport.addEventListener("scroll", handleViewportChange);
+    }
+    window.addEventListener("resize", handleViewportChange);
+
+    return () => {
+      if (typeof window !== "undefined" && window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleViewportChange);
+        window.visualViewport.removeEventListener("scroll", handleViewportChange);
+      }
+      window.removeEventListener("resize", handleViewportChange);
+    };
+  }, [isOpen]);
 
   // Initial welcome greeting & live cart detection
   useEffect(() => {
@@ -88,6 +132,11 @@ export default function AiOrderChatbot() {
   }, [messages.length, isOpen]);
 
   const handleContainerScroll = () => {
+    // When user scrolls messages, dismiss active keyboard on mobile
+    if (document.activeElement === inputRef.current) {
+      inputRef.current?.blur();
+    }
+
     if (scrollContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 60;
@@ -100,10 +149,19 @@ export default function AiOrderChatbot() {
     setShowScrollBottom(false);
   };
 
+  const dismissKeyboard = () => {
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+  };
+
   const handleSend = async (textToSend?: string, explicitAction?: string) => {
     const content = textToSend || input;
     if (!content.trim() && !explicitAction) return;
     if (isTyping) return;
+
+    // Dismiss keyboard on send for clean mobile experience
+    dismissKeyboard();
 
     const isConfirm =
       explicitAction === "confirm_order" ||
@@ -197,7 +255,7 @@ export default function AiOrderChatbot() {
 
   return (
     <>
-      {/* Floating Bottom-Right Launcher */}
+      {/* Floating Bottom-Right Launcher (positioned above mobile nav on phones) */}
       <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end">
         {!isOpen && showTooltip && (
           <div className="mb-2 bg-ink-primary text-white text-xs py-2 px-3.5 rounded-2xl shadow-xl border border-brand-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-xs">
@@ -229,13 +287,34 @@ export default function AiOrderChatbot() {
         </button>
       </div>
 
-      {/* Chat Window Panel / Mobile Sheet */}
+      {/* Background Dim Backdrop on Mobile */}
       {isOpen && (
-        <div className="fixed inset-x-0 bottom-0 sm:bottom-24 sm:right-6 sm:left-auto sm:w-[420px] h-[85vh] sm:h-[600px] bg-surface-pure sm:rounded-3xl shadow-modal border border-brand-100 flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5 duration-300 pb-safe overscroll-contain">
-          {/* Header */}
-          <div className="p-3.5 sm:p-4 bg-brand-900 text-white flex items-center justify-between shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="relative w-9 h-9 rounded-full bg-white p-1 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
+        <div
+          onClick={closeChat}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 sm:hidden animate-in fade-in duration-200"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Chat Window Panel: Fullscreen Responsive Mobile Sheet & Desktop Floating Modal */}
+      {isOpen && (
+        <div
+          ref={chatContainerRef}
+          style={viewportStyle}
+          className="fixed inset-0 sm:inset-auto sm:bottom-24 sm:right-6 sm:w-[420px] sm:h-[600px] h-[100dvh] bg-surface-pure sm:rounded-3xl shadow-modal border-t sm:border border-brand-100 flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5 duration-300 overscroll-contain"
+        >
+          {/* Mobile Drag / Pull Indicator */}
+          <div
+            onClick={closeChat}
+            className="sm:hidden w-full bg-brand-950 py-1.5 flex items-center justify-center cursor-pointer flex-shrink-0"
+          >
+            <div className="w-12 h-1 bg-white/40 rounded-full" />
+          </div>
+
+          {/* Sticky Header with Prominent Close Button */}
+          <div className="p-3 sm:p-4 bg-brand-900 text-white flex items-center justify-between shadow-sm flex-shrink-0 sticky top-0 z-10">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white p-1 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
                 <Image
                   src="/images/logo.png"
                   alt="Maa Sadqay Assistant"
@@ -244,22 +323,25 @@ export default function AiOrderChatbot() {
                   className="object-contain"
                 />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5 font-display font-bold text-sm">
-                  <span>Maa Sadqay Order Assistant</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 font-display font-bold text-xs sm:text-sm truncate">
+                  <span>Maa Sadqay Concierge</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
                 </div>
-                <div className="text-[11px] text-brand-200">24/7 AI Store Concierge • Lahore</div>
+                <div className="text-[10px] sm:text-[11px] text-brand-200 truncate">
+                  24/7 AI Store Concierge • Lahore
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            {/* Header Actions */}
+            <div className="flex items-center gap-1 flex-shrink-0">
               <a
                 href={SITE_CONFIG.contact.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Talk to human on WhatsApp"
-                className="p-1.5 rounded-lg text-emerald-400 hover:bg-white/10 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg text-emerald-400 hover:bg-white/10 transition-colors"
                 aria-label="WhatsApp Support"
               >
                 <Phone className="w-4 h-4" />
@@ -269,31 +351,34 @@ export default function AiOrderChatbot() {
                 type="button"
                 onClick={handleReset}
                 title="Restart chat"
-                className="p-1.5 rounded-lg text-brand-200 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg text-brand-200 hover:text-white hover:bg-white/10 transition-colors"
                 aria-label="Reset chat"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
 
+              {/* Prominent Easy-to-Tap Close Button */}
               <button
                 type="button"
                 onClick={closeChat}
-                className="p-1.5 rounded-lg text-brand-200 hover:text-white hover:bg-white/10 transition-colors"
-                aria-label="Minimize chat"
+                className="p-1.5 sm:p-2 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-all flex items-center gap-1 active:scale-95"
+                aria-label="Close chat"
               >
-                <ChevronDown className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-[11px] font-bold hidden xs:inline">Close</span>
               </button>
             </div>
           </div>
 
-          {/* Messages Area with Scroll Containment */}
+          {/* Messages Area: Scrollable and Tappable to Dismiss Keyboard */}
           <div
             ref={scrollContainerRef}
+            onClick={dismissKeyboard}
             onScroll={handleContainerScroll}
             onWheel={(e) => {
               e.stopPropagation();
             }}
-            className="flex-1 overflow-y-auto overscroll-contain touch-pan-y p-4 space-y-4 chat-messages-scroll bg-surface-warm/40 relative"
+            className="flex-1 overflow-y-auto overscroll-contain touch-pan-y p-3.5 sm:p-4 space-y-3.5 chat-messages-scroll bg-surface-warm/40 relative"
             role="log"
             aria-live="polite"
           >
@@ -306,7 +391,7 @@ export default function AiOrderChatbot() {
               >
                 {/* Text Bubble */}
                 <div
-                  className={`max-w-[88%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
+                  className={`max-w-[88%] rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
                     msg.sender === "user"
                       ? "bg-brand-500 text-white rounded-tr-none font-medium"
                       : "bg-surface-pure text-ink-primary border border-brand-100 rounded-tl-none font-normal"
@@ -325,11 +410,11 @@ export default function AiOrderChatbot() {
                     {msg.products.map((prod) => (
                       <div
                         key={prod.id}
-                        className="flex gap-3 p-3 rounded-2xl bg-white border border-brand-200 shadow-sm hover:border-brand-400 transition-all"
+                        className="flex gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-2xl bg-white border border-brand-200 shadow-sm hover:border-brand-400 transition-all"
                       >
                         <div className="relative w-16 h-20 rounded-xl overflow-hidden bg-brand-50 flex-shrink-0">
                           <Image
-                            src={prod.images[0] || "/images/boys.webp"}
+                            src={prod.images?.[0] || "/images/boys.webp"}
                             alt={prod.name}
                             fill
                             className="object-cover"
@@ -354,8 +439,8 @@ export default function AiOrderChatbot() {
                           </div>
 
                           <div className="flex items-center justify-between pt-1">
-                            <span className="text-[10px] text-ink-secondary">
-                              Sizes: {prod.sizes.slice(0, 3).join(", ")}
+                            <span className="text-[10px] text-ink-secondary truncate max-w-[120px]">
+                              Sizes: {prod.sizes?.slice(0, 3).join(", ") || "Standard"}
                             </span>
                             <button
                               type="button"
@@ -373,7 +458,7 @@ export default function AiOrderChatbot() {
 
                 {/* Order Summary Card with Big Confirmation Button */}
                 {msg.orderSummary && (
-                  <div className="w-full mt-3 p-4 bg-white rounded-2xl border-2 border-brand-400 shadow-md space-y-3">
+                  <div className="w-full mt-3 p-3.5 sm:p-4 bg-white rounded-2xl border-2 border-brand-400 shadow-md space-y-3">
                     <div className="flex items-center justify-between border-b border-brand-100 pb-2">
                       <span className="font-display font-bold text-xs uppercase text-brand-600">
                         📋 Order Summary
@@ -385,20 +470,20 @@ export default function AiOrderChatbot() {
 
                     <div className="space-y-1.5 text-xs text-ink-secondary">
                       <div>
-                        <strong>Customer:</strong> {msg.orderSummary.customer.fullName} (
-                        {msg.orderSummary.customer.phoneNumber})
+                        <strong>Customer:</strong> {msg.orderSummary.customer?.fullName} (
+                        {msg.orderSummary.customer?.phoneNumber})
                       </div>
                       <div>
-                        <strong>Address:</strong> {msg.orderSummary.customer.address},{" "}
-                        {msg.orderSummary.customer.city}
+                        <strong>Address:</strong> {msg.orderSummary.customer?.address},{" "}
+                        {msg.orderSummary.customer?.city}
                       </div>
                       <div className="pt-1 font-semibold text-ink-primary">
-                        Items ({msg.orderSummary.items.length}):
+                        Items ({msg.orderSummary.items?.length || 0}):
                       </div>
                       <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
-                        {msg.orderSummary.items.map((item: any, i: number) => (
+                        {msg.orderSummary.items?.map((item: any, i: number) => (
                           <li key={i}>
-                            {item.product.name} ({item.product.sku}) — Size: {item.size} x{" "}
+                            {item.product?.name} ({item.product?.sku}) — Size: {item.size} x{" "}
                             {item.quantity}
                           </li>
                         ))}
@@ -438,7 +523,7 @@ export default function AiOrderChatbot() {
 
                 {/* Confirmed Order Card */}
                 {msg.confirmedOrder && (
-                  <div className="w-full mt-3 p-4 bg-emerald-50 rounded-2xl border-2 border-emerald-300 shadow-lg space-y-3 text-ink-primary animate-in zoom-in-95 duration-300">
+                  <div className="w-full mt-3 p-3.5 sm:p-4 bg-emerald-50 rounded-2xl border-2 border-emerald-300 shadow-lg space-y-3 text-ink-primary animate-in zoom-in-95 duration-300">
                     <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
                       <CheckCircle className="w-5 h-5 text-emerald-600" />
                       <span>Order Confirmed & Placed!</span>
@@ -497,7 +582,7 @@ export default function AiOrderChatbot() {
                             chip.toLowerCase().includes("confirm") ? "confirm_order" : undefined
                           )
                         }
-                        className="px-3 py-1.5 rounded-full bg-white border border-brand-200 text-[11px] font-semibold text-ink-primary hover:text-white hover:bg-brand-500 hover:border-brand-500 transition-all shadow-xs"
+                        className="px-3 py-1.5 rounded-full bg-white border border-brand-200 text-[11px] font-semibold text-ink-primary hover:text-white hover:bg-brand-500 hover:border-brand-500 transition-all shadow-xs active:scale-95"
                       >
                         {chip}
                       </button>
@@ -522,21 +607,21 @@ export default function AiOrderChatbot() {
             <button
               type="button"
               onClick={scrollToBottom}
-              className="absolute bottom-20 right-6 z-10 px-3 py-1.5 rounded-full bg-brand-900/90 text-white text-[11px] font-semibold flex items-center gap-1 shadow-lg hover:bg-brand-900 transition-all"
+              className="absolute bottom-20 right-4 sm:right-6 z-10 px-3 py-1.5 rounded-full bg-brand-900/90 text-white text-[11px] font-semibold flex items-center gap-1 shadow-lg hover:bg-brand-900 transition-all"
             >
               <span>Latest</span>
               <ArrowDown className="w-3.5 h-3.5" />
             </button>
           )}
 
-          {/* Input Bar */}
-          <div className="p-3 bg-surface-pure border-t border-brand-100 flex-shrink-0">
+          {/* Input Bar: Always Visible and Pinned at Bottom of Viewport */}
+          <div className="p-2.5 sm:p-3 bg-surface-pure border-t border-brand-100 flex-shrink-0 sticky bottom-0 z-10 pb-safe">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSend();
               }}
-              className="flex items-center gap-2"
+              className="flex items-center gap-1.5 sm:gap-2"
             >
               <input
                 ref={inputRef}
@@ -544,18 +629,36 @@ export default function AiOrderChatbot() {
                 placeholder="Type 'boys kurta', size, or your address..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className="flex-1 bg-surface-warm border border-brand-200 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-ink-primary outline-none focus:border-brand-500 transition-colors placeholder:text-ink-tertiary"
+                onFocus={() => {
+                  setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                  }, 300);
+                }}
+                /* text-base on mobile prevents iOS Safari auto-zoom! */
+                className="flex-1 bg-surface-warm border border-brand-200 rounded-2xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-base sm:text-sm text-ink-primary outline-none focus:border-brand-500 transition-colors placeholder:text-ink-tertiary"
               />
+
+              {/* Dismiss keyboard button (visible on mobile when input is active) */}
+              <button
+                type="button"
+                onClick={dismissKeyboard}
+                title="Hide keyboard"
+                className="sm:hidden p-2 rounded-2xl bg-surface-warm text-ink-secondary hover:bg-brand-50 border border-brand-200 transition-all flex items-center justify-center flex-shrink-0"
+              >
+                <Keyboard className="w-4 h-4" />
+              </button>
+
               <button
                 type="submit"
                 disabled={!input.trim() || isTyping}
                 aria-label="Send message"
-                className="p-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white shadow-soft transition-all flex items-center justify-center flex-shrink-0"
+                className="p-2 sm:p-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white shadow-soft transition-all flex items-center justify-center flex-shrink-0 active:scale-95"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
-            <div className="text-[10px] text-ink-tertiary text-center mt-1.5 flex items-center justify-center gap-1">
+
+            <div className="text-[10px] text-ink-tertiary text-center mt-1 flex items-center justify-center gap-1">
               <span>Real-Time COD Order Placement</span>
               <span>•</span>
               <span>0315-4245424</span>

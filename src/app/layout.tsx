@@ -95,10 +95,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="font-sans antialiased text-ink-primary bg-surface-warm selection:bg-brand-500 selection:text-white">
+      <body className="font-sans antialiased text-ink-primary bg-surface-warm selection:bg-brand-500 selection:text-white overflow-x-hidden">
         <SmoothScroll>
           <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <main className="min-h-screen overflow-x-hidden">{children}</main>
           <Footer />
           <MobileBottomNav />
           <CartDrawer />
