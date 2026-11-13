@@ -13,9 +13,7 @@ import {
   CheckCircle,
   Truck,
   ExternalLink,
-  ChevronDown,
   ArrowDown,
-  Keyboard,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { useChatUIStore, useCartStore } from "@/lib/store";
@@ -52,52 +50,9 @@ export default function AiOrderChatbot() {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [sessionState, setSessionState] = useState<any>({ step: "greeting", cart: [], customer: {} });
 
-  // Mobile virtual keyboard viewport height tracker
-  const [viewportStyle, setViewportStyle] = useState<{ height?: string; top?: string }>({});
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  // Dynamic mobile keyboard height listener using window.visualViewport
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleViewportChange = () => {
-      if (typeof window !== "undefined" && window.innerWidth < 640) {
-        if (window.visualViewport) {
-          setViewportStyle({
-            height: `${window.visualViewport.height}px`,
-            top: `${window.visualViewport.offsetTop}px`,
-          });
-        } else {
-          setViewportStyle({
-            height: `${window.innerHeight}px`,
-            top: "0px",
-          });
-        }
-      } else {
-        setViewportStyle({});
-      }
-    };
-
-    handleViewportChange();
-
-    if (typeof window !== "undefined" && window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleViewportChange);
-      window.visualViewport.addEventListener("scroll", handleViewportChange);
-    }
-    window.addEventListener("resize", handleViewportChange);
-
-    return () => {
-      if (typeof window !== "undefined" && window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleViewportChange);
-        window.visualViewport.removeEventListener("scroll", handleViewportChange);
-      }
-      window.removeEventListener("resize", handleViewportChange);
-    };
-  }, [isOpen]);
 
   // Initial welcome greeting & live cart detection
   useEffect(() => {
@@ -131,12 +86,8 @@ export default function AiOrderChatbot() {
     }
   }, [messages.length, isOpen]);
 
+  // Clean container scroll handler (ONLY handles scroll bottom button, NEVER blurs active input)
   const handleContainerScroll = () => {
-    // When user scrolls messages, dismiss active keyboard on mobile
-    if (document.activeElement === inputRef.current) {
-      inputRef.current?.blur();
-    }
-
     if (scrollContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 60;
@@ -149,19 +100,10 @@ export default function AiOrderChatbot() {
     setShowScrollBottom(false);
   };
 
-  const dismissKeyboard = () => {
-    if (inputRef.current) {
-      inputRef.current.blur();
-    }
-  };
-
   const handleSend = async (textToSend?: string, explicitAction?: string) => {
     const content = textToSend || input;
     if (!content.trim() && !explicitAction) return;
     if (isTyping) return;
-
-    // Dismiss keyboard on send for clean mobile experience
-    dismissKeyboard();
 
     const isConfirm =
       explicitAction === "confirm_order" ||
@@ -287,7 +229,7 @@ export default function AiOrderChatbot() {
         </button>
       </div>
 
-      {/* Background Dim Backdrop on Mobile */}
+      {/* Background Dim Backdrop on Desktop & Mobile */}
       {isOpen && (
         <div
           onClick={closeChat}
@@ -299,20 +241,10 @@ export default function AiOrderChatbot() {
       {/* Chat Window Panel: Fullscreen Responsive Mobile Sheet & Desktop Floating Modal */}
       {isOpen && (
         <div
-          ref={chatContainerRef}
-          style={viewportStyle}
-          className="fixed inset-0 sm:inset-auto sm:bottom-24 sm:right-6 sm:w-[420px] sm:h-[600px] h-[100dvh] bg-surface-pure sm:rounded-3xl shadow-modal border-t sm:border border-brand-100 flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5 duration-300 overscroll-contain"
+          className="fixed inset-0 sm:inset-auto sm:bottom-24 sm:right-6 sm:w-[420px] sm:h-[600px] h-dvh bg-surface-pure sm:rounded-3xl shadow-modal border sm:border border-brand-100 flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-3 duration-200"
         >
-          {/* Mobile Drag / Pull Indicator */}
-          <div
-            onClick={closeChat}
-            className="sm:hidden w-full bg-brand-950 py-1.5 flex items-center justify-center cursor-pointer flex-shrink-0"
-          >
-            <div className="w-12 h-1 bg-white/40 rounded-full" />
-          </div>
-
           {/* Sticky Header with Prominent Close Button */}
-          <div className="p-3 sm:p-4 bg-brand-900 text-white flex items-center justify-between shadow-sm flex-shrink-0 sticky top-0 z-10">
+          <div className="p-3 sm:p-4 bg-brand-900 text-white flex items-center justify-between shadow-sm flex-shrink-0 sticky top-0 z-20">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white p-1 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
                 <Image
@@ -335,13 +267,13 @@ export default function AiOrderChatbot() {
             </div>
 
             {/* Header Actions */}
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <a
                 href={SITE_CONFIG.contact.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Talk to human on WhatsApp"
-                className="p-1.5 sm:p-2 rounded-lg text-emerald-400 hover:bg-white/10 transition-colors"
+                className="p-2 rounded-xl text-emerald-400 hover:bg-white/10 transition-colors"
                 aria-label="WhatsApp Support"
               >
                 <Phone className="w-4 h-4" />
@@ -351,7 +283,7 @@ export default function AiOrderChatbot() {
                 type="button"
                 onClick={handleReset}
                 title="Restart chat"
-                className="p-1.5 sm:p-2 rounded-lg text-brand-200 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-xl text-brand-200 hover:text-white hover:bg-white/10 transition-colors"
                 aria-label="Reset chat"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -361,19 +293,18 @@ export default function AiOrderChatbot() {
               <button
                 type="button"
                 onClick={closeChat}
-                className="p-1.5 sm:p-2 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-all flex items-center gap-1 active:scale-95"
+                className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 border border-white/20 shadow-xs cursor-pointer"
                 aria-label="Close chat"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-[11px] font-bold hidden xs:inline">Close</span>
+                <X className="w-4 h-4" />
+                <span>Close</span>
               </button>
             </div>
           </div>
 
-          {/* Messages Area: Scrollable and Tappable to Dismiss Keyboard */}
+          {/* Messages Area: Scrollable without any blur races */}
           <div
             ref={scrollContainerRef}
-            onClick={dismissKeyboard}
             onScroll={handleContainerScroll}
             onWheel={(e) => {
               e.stopPropagation();
@@ -614,14 +545,14 @@ export default function AiOrderChatbot() {
             </button>
           )}
 
-          {/* Input Bar: Always Visible and Pinned at Bottom of Viewport */}
-          <div className="p-2.5 sm:p-3 bg-surface-pure border-t border-brand-100 flex-shrink-0 sticky bottom-0 z-10 pb-safe">
+          {/* Input Bar: Always Visible and Pinned at Bottom */}
+          <div className="p-3 bg-surface-pure border-t border-brand-100 flex-shrink-0 sticky bottom-0 z-20 pb-safe">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSend();
               }}
-              className="flex items-center gap-1.5 sm:gap-2"
+              className="flex items-center gap-2"
             >
               <input
                 ref={inputRef}
@@ -629,36 +560,21 @@ export default function AiOrderChatbot() {
                 placeholder="Type 'boys kurta', size, or your address..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onFocus={() => {
-                  setTimeout(() => {
-                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-                  }, 300);
-                }}
-                /* text-base on mobile prevents iOS Safari auto-zoom! */
-                className="flex-1 bg-surface-warm border border-brand-200 rounded-2xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-base sm:text-sm text-ink-primary outline-none focus:border-brand-500 transition-colors placeholder:text-ink-tertiary"
+                /* text-base prevents iOS Safari from auto-zooming! */
+                className="flex-1 bg-surface-warm border border-brand-200 rounded-2xl px-4 py-2.5 text-base sm:text-sm text-ink-primary outline-none focus:border-brand-500 transition-colors placeholder:text-ink-tertiary"
               />
-
-              {/* Dismiss keyboard button (visible on mobile when input is active) */}
-              <button
-                type="button"
-                onClick={dismissKeyboard}
-                title="Hide keyboard"
-                className="sm:hidden p-2 rounded-2xl bg-surface-warm text-ink-secondary hover:bg-brand-50 border border-brand-200 transition-all flex items-center justify-center flex-shrink-0"
-              >
-                <Keyboard className="w-4 h-4" />
-              </button>
 
               <button
                 type="submit"
                 disabled={!input.trim() || isTyping}
                 aria-label="Send message"
-                className="p-2 sm:p-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white shadow-soft transition-all flex items-center justify-center flex-shrink-0 active:scale-95"
+                className="p-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white shadow-soft transition-all flex items-center justify-center flex-shrink-0 active:scale-95"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
 
-            <div className="text-[10px] text-ink-tertiary text-center mt-1 flex items-center justify-center gap-1">
+            <div className="text-[10px] text-ink-tertiary text-center mt-1.5 flex items-center justify-center gap-1">
               <span>Real-Time COD Order Placement</span>
               <span>•</span>
               <span>0315-4245424</span>

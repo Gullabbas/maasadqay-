@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import { SITE_CONFIG } from "@/lib/config";
 import Navbar from "@/components/layout/Navbar";
@@ -10,6 +10,14 @@ import AiOrderChatbot from "@/components/chat/AiOrderChatbot";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import CursorSpotlight from "@/components/layout/CursorSpotlight";
 import LiveActivityPill from "@/components/layout/LiveActivityPill";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  interactiveWidget: "resizes-content",
+  themeColor: "#462012",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maasadqay.com"),
